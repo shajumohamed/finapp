@@ -1,19 +1,20 @@
-import { auth } from "./auth"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/dashboard/:path*"]
 }
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth
-  const { nextUrl } = req
-  
-  // Protect dashboard route
-  if (nextUrl.pathname.startsWith("/dashboard")) {
-    if (!isLoggedIn) {
-      return Response.redirect(new URL("/", nextUrl))
-    }
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  })
+
+  if (!token) {
+    return NextResponse.redirect(new URL("/", request.url))
   }
-  
-  return undefined
-})
+
+  return NextResponse.next()
+}

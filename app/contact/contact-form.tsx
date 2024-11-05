@@ -1,12 +1,12 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import {  useState } from "react"
 import { submitContactForm } from "./actions"
 import { toast } from "sonner"
 
 export default function ContactForm() {
   const [pending, setPending] = useState(false)
-  const [state, formAction] = useActionState(submitContactForm, null)
+  //const [state, formAction] = useActionState(submitContactForm, null)
 
   const handleSubmit = async (formData: FormData) => {
     setPending(true)
@@ -21,6 +21,7 @@ export default function ContactForm() {
         toast.error(result?.error || "Failed to send message")
       }
     } catch (error) {
+      console.error("An error occurred:", error) 
       toast.error("An error occurred")
     } finally {
       setPending(false)

@@ -1,13 +1,18 @@
-import mongoose from "mongoose";
-const { MONGODB_URI } = process.env;
+import mongoose from "mongoose"
+
+let isConnected = false
+
 export const connectDB = async () => {
-  try {
-    const { connection } = await mongoose.connect(MONGODB_URI as string);
-    if (connection.readyState === 1) {
-      return Promise.resolve(true);
-    }
-  } catch (error) {
-    console.error(error);
-    return Promise.reject(error);
+  if (isConnected) {
+    return
   }
-};
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URI as string)
+    isConnected = true
+    console.log("Connected to MongoDB")
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error)
+    throw error
+  }
+}

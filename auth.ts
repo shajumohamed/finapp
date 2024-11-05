@@ -1,54 +1,65 @@
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
-import { connectDB } from "./lib/mongdb"
-import User from "./models/User"
-import Account from "./models/Account"
+import type { NextAuthConfig } from "next-auth"
+import { connectDB } from "@/lib/mongdb"
+import User from "@/models/User"
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const config = {
   providers: [Google],
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider === "google") {
-        try {
-          await connectDB();
-          
-          // Check if user exists
-          let dbUser = await User.findOne({ email: user.email });
-          
-          if (!dbUser) {
-            // Create new user if doesn't exist
-            dbUser = await User.create({
-              name: user.name,
-              email: user.email,
-              image: user.image,
-              emailVerified: new Date(),
-            });
-          }
+      if (!user.email) return false
 
-          // Create or update account
-          await Account.findOneAndUpdate(
-            { providerAccountId: account.providerAccountId },
-            {
-              userId: dbUser._id,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token,
-              session_state: account.session_state
-            },
-            { upsert: true }
-          );
+      try {
+        await connectDB()
+        
+        // Create or update user in database
+        await User.findOneAndUpdate(
+          { email: user.email },
+          {
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            emailVerified: 'emailVerified' in user ? user.emailVerified : new Date(),
+          },
+          { upsert: true }
+        )
+
+        return true
+      } catch (error) {
+        console.error("Error saving user to database:", error)
+        return false
+      }
+    },
+    async jwt({ token, user, account }) {
+      if (account && user) {
+        token.userId = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.userId as string
+        
+        // Fetch latest user data from database
+        try {
+          await connectDB()
+          const dbUser = await User.findOne({ email: session.user.email })
+          if (dbUser) {
+            session.user.name = dbUser.name
+            session.user.image = dbUser.image
+          }
         } catch (error) {
-          console.error("Error saving user to MongoDB:", error);
-          return false;
+          console.error("Error fetching user data:", error)
         }
       }
-      return true;
+      return session
     },
   },
-})
+  pages: {
+    signIn: "/",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+} satisfies NextAuthConfig
+
+export const { handlers, auth, signIn, signOut } = NextAuth(config)

@@ -1,15 +1,6 @@
-import mongoose, { Model } from 'mongoose';
+import mongoose from "mongoose"
 
-interface IUser {
-  name?: string;
-  email: string;
-  image?: string;
-  emailVerified?: Date;
-  accounts?: mongoose.Types.ObjectId[];
-  transactions?: mongoose.Types.ObjectId[];
-}
-
-const UserSchema = new mongoose.Schema<IUser>({
+const UserSchema = new mongoose.Schema({
   name: String,
   email: {
     type: String,
@@ -18,13 +9,19 @@ const UserSchema = new mongoose.Schema<IUser>({
   },
   image: String,
   emailVerified: Date,
-  accounts: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account'
-  }]
+  lastLogin: {
+    type: Date,
+    default: Date.now,
+  }
 }, {
   timestamps: true
-});
+})
 
-const User = (mongoose.models?.User || mongoose.model<IUser>('User', UserSchema)) as Model<IUser>;
-export default User;
+// Update lastLogin on every login
+UserSchema.pre('findOneAndUpdate', function() {
+  this.set({ lastLogin: new Date() })
+})
+
+const User = mongoose.models?.User || mongoose.model("User", UserSchema)
+
+export default User
