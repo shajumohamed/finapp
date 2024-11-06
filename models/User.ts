@@ -12,7 +12,15 @@ const UserSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: Date.now,
-  }
+  },
+  subscriptionId: String,
+  planId: String,
+  subscriptionStatus: {
+    type: String,
+    enum: ["active", "canceled", "paused", "past_due", null],
+    default: null,
+  },
+  lastBillingDate: Date,
 }, {
   timestamps: true
 })
